@@ -1,6 +1,7 @@
 # custom ignores
 Project Proposal
-
+code/data/*.zip
+code/data/ml-25m
 
 ## Core latex/pdflatex auxiliary files:
 *.aux
@@ -28,7 +29,7 @@ Project Proposal
 ## Generated if empty string is given at "Please type another file name for output:"
 write-up/informatics-draft/dissertation-informatics.pdf
 write-up/informatics-mscdiss-skeleton/skeleton.pdf
-write-up/OR_MSc_LaTeX/MyThesis.pdf
+write-up/OR_MSc_LaTeX-skeleton/MyThesis.pdf
 write-up/main/build/MyThesis.pdf
 
 ## Bibliography auxiliary files (bibtex/biblatex/biber):
