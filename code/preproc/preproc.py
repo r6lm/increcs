@@ -23,7 +23,8 @@ preproc_config = dict(
     data_dir = "./../../data",
     n_periods = 31,
     dst_dir = "preprocessed",
-    dst_filename = "ml_processed"
+    dst_filename = "ml_processed",
+    movie_map_filename = "movieId_map"
     )
 print(preproc_config)
 
@@ -32,7 +33,6 @@ print(preproc_config)
 
 
 # raw data
-cat_cols = ["movieId"]
 parsed_ratings_df = pd.read_csv(
     f'{preproc_config["data_dir"]}/ml-25m/ratings.csv') #, 
     #dtype=dict(zip(cat_cols, ["category"] * 2)))
@@ -49,9 +49,6 @@ parsed_ratings_df = pd.read_csv(
 # In[4]:
 
 
-# convert to categorical 
-parsed_ratings_df.loc[:, cat_cols] =  parsed_ratings_df[cat_cols].astype(
-    "category")
 # downcast ratings to uints from 1 to 10
 parsed_ratings_df.loc[:, "rating"] = (parsed_ratings_df.rating * 2).astype("uint8")
 
@@ -71,15 +68,21 @@ end_date = "20190101"
 asmg_ratings_df = parsed_ratings_df.loc[lambda df: df["timestamp"].between(
     start_date, end_date, inclusive="left"), :].copy()
 
+
+
 # set user according to ASMG: give the id according to their order
-user_map_srs = pd.Series(asmg_ratings_df["userId"].unique()
-).reset_index(drop=False).set_index(0).squeeze()
+def get_id_map(srs): return pd.Series(
+    srs.unique()).reset_index(drop=False).set_index(0).squeeze()
+
+
+user_map_srs = get_id_map(asmg_ratings_df["userId"])
 asmg_ratings_df.loc[:, "userId"] = asmg_ratings_df.loc[:, "userId"].map(
     user_map_srs).astype("category")
 
 # drop unused categories on movieId
-asmg_ratings_df.loc[:, "movieId"] = asmg_ratings_df[
-    "movieId"].cat.remove_unused_categories()
+item_map_srs = get_id_map(asmg_ratings_df["movieId"])
+asmg_ratings_df.loc[:, "movieId"] = asmg_ratings_df.loc[:, "movieId"].map(
+    item_map_srs).astype("category")
 
 # assign label 1 to ratings >= 8 to transform in binary classification
 asmg_ratings_df = asmg_ratings_df.assign(**{
@@ -117,6 +120,11 @@ asmg_ratings_df = asmg_ratings_df.assign(**{
 })
 asmg_ratings_df.drop(asmg_ratings_df.index[
     asmg_ratings_df["period"] > preproc_config['n_periods']], inplace=True)
+
+# drop timestamp as it is unused
+asmg_ratings_df.drop("timestamp", axis=1, inplace=True)
+
+# check types and disk usage
 asmg_ratings_df.info()
 
 
@@ -136,7 +144,22 @@ if not os.path.exists(preprocessed_data_dir):
 
 # save processed file which is the input of all models
 dst_path = f"{preprocessed_data_dir}/{preproc_config['dst_filename']}.csv"
-asmg_ratings_df.to_csv(dst_path)
-
+asmg_ratings_df.to_csv(dst_path, index=False)
 print(f"saved output at {os.path.abspath(dst_path)}")
+
+
+# In[14]:
+
+
+item_map_srs.index.to_series().rename("movieId")
+
+
+# In[15]:
+
+
+# save movieId map for movie reidentification
+movie_map_path = f'{preprocessed_data_dir}/{preproc_config["movie_map_filename"]}.csv'
+item_map_srs.index.to_series().rename("movieId").reset_index(
+    drop=True).to_csv(movie_map_path)
+print(f"saved movieId_map at {os.path.abspath(movie_map_path)}")
 
