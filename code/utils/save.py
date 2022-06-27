@@ -1,4 +1,4 @@
-import datetime, json
+import datetime, json, glob
 
 
 def get_timestamp(strftime="%y%m%dT%H%M%S"):
@@ -11,3 +11,7 @@ def save_as_json(d:dict, path):
     with open(path, 'w') as file:
         json.dump(d, file)
         print(f'saving json at: {path}')
+
+
+def get_path_from_re(re):
+    return sorted(glob.glob(re))[-1]

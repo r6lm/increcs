@@ -12,6 +12,11 @@ class MF(nn.Module):
         self.user_latent_emb = nn.Embedding(n_user, n_latent)
         self.item_latent_emb = nn.Embedding(n_item, n_latent)
 
+        ## set bias initialization to zero
+        nn.init.zeros_(self.user_bias_emb.weight)
+        nn.init.zeros_(self.item_bias_emb.weight)
+        
+
         # register instance params
         self.n_user = n_user
         self.n_item = n_item
@@ -23,6 +28,6 @@ class MF(nn.Module):
         user_latent = self.user_latent_emb(user_ids)
         item_latent = self.item_latent_emb(item_ids)
         interaction = torch.mul(user_latent, item_latent).sum(-1)
-        return F.sigmoid(user_bias + item_bias + interaction)
+        return torch.sigmoid(user_bias + item_bias + interaction) # replace for nn.Sigmoid
     
 
