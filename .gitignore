@@ -443,6 +443,6 @@ cython_debug/
 .vscode/settings.json
 # custom ignores
 Project Proposal
-code/data/*.zip
-code/data/ml-25m
+data/*.zip
+data/ml-25m
 model
