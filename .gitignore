@@ -445,4 +445,5 @@ cython_debug/
 Project Proposal
 data/*.zip
 data/ml-25m
+data/preprocessed/*
 model
