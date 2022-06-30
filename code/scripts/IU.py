@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 get_ipython().run_line_magic('load_ext', 'autoreload')
@@ -29,35 +29,37 @@ timestamp = get_timestamp()
 # # control flow parameters
 # 
 
-# In[2]:
+# In[ ]:
 
 
 train_params = dict(
     input_path="../../data/preprocessed/ml_processed.csv",
-    test_start_period=25,# 11
-    test_end_period=31,# 12
+    test_start_period=25,  # 11
+    test_end_period=31,  # 12
     offline_train_start_period=1,
     train_window=10,
     n_epochs_offline=10,
     n_epochs_online=1,
-    batch_size = 1024,
-    learning_rate = 1e-3, # 1e-2 is the ASMG MF implementation
-    model_checkpoint_dir = './../../model/MF/IU',
-    model_filename_stem = 'first_mf',
+    batch_size=1024,
+    learning_rate=1e-3,  # 1e-2 is the ASMG MF implementation
+    model_filename_stem='first_mf',
     seed=6202,
     save_model=False,
     save_result=True
 )
 model_params = dict(
-    alias="MF",
+    alias="IP",
     n_users=43183,
     n_items=51149,
     n_latents=8
 )
-get_model(model_params)
+train_params["model_checkpoint_dir"] = f'./../../model/{model_params["alias"]}/IU'
+
+# m = get_model(model_params)
+# [p for p in m.parameters()]
 
 
-# In[3]:
+# In[ ]:
 
 
 # initialize training components
@@ -67,7 +69,7 @@ loss_function = nn.BCELoss()
 optimizer = optim.Adam(model.parameters(), lr=train_params["learning_rate"])
 
 
-# In[4]:
+# In[ ]:
 
 
 
@@ -173,6 +175,8 @@ for test_period in range(
         torch.save(model.state_dict(), model_checkpoint_path)
         print("saved model at:", model_checkpoint_path)
 
+    if train_params["save_model"] or train_params["save_result"]:
+        
         # save json only once per training regime execution
         if test_period == train_params["test_start_period"]:
             save_as_json(

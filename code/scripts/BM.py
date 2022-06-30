@@ -40,18 +40,18 @@ train_params = dict(
     n_epochs=10,
     batch_size = 1024,
     learning_rate = 1e-3, # 1e-2 is the ASMG MF implementation
-    model_checkpoint_dir = './../../model/MF/BM',
     model_filename_stem = 'first_mf',
     seed=6202,
     save_model=False,
     save_result=True
 )
 model_params = dict(
-    alias="MF",
-    n_users=43183,
+    alias="IP",
+    #n_users=43183,
     n_items=51149,
-    n_latents=8
+    #n_latents=8
 )
+train_params["model_checkpoint_dir"] = f'./../../model/{model_params["alias"]}/BM'
 
 
 # In[ ]:
@@ -148,6 +148,7 @@ for test_period in range(
         torch.save(model.state_dict(), model_checkpoint_path)
         print("saved model at:", model_checkpoint_path)
 
+    if train_params["save_model"] or train_params["save_result"]:
         # save json only once per training regime execution
         if test_period == train_params["test_start_period"]:
             save_as_json(
@@ -200,6 +201,7 @@ for test_period in range(
     # reset model parameters
     torch.manual_seed(train_params["seed"])
     model.reset_parameters()
+    model.to(device)
 
 else:
     df_path = model_checkpoint_path.replace(".pth", ".csv").replace(
