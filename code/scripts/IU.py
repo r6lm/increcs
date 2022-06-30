@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 get_ipython().run_line_magic('load_ext', 'autoreload')
@@ -17,7 +17,7 @@ from dataset.ASMGMovieLens import ASMGMovieLens
 from utils.save import get_timestamp, save_as_json, get_path_from_re
 
 from torch.utils.data import DataLoader # is this tqdm importer?
-from MF.model import MF
+from MF.model import get_model
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 print(f'{device = }')
@@ -29,20 +29,13 @@ timestamp = get_timestamp()
 # # control flow parameters
 # 
 
-# In[ ]:
-
-
-do_train = True
-do_test = True
-
-
-# In[ ]:
+# In[2]:
 
 
 train_params = dict(
     input_path="../../data/preprocessed/ml_processed.csv",
-    test_start_period=25,
-    test_end_period=31,
+    test_start_period=25,# 11
+    test_end_period=31,# 12
     offline_train_start_period=1,
     train_window=10,
     n_epochs_offline=10,
@@ -51,28 +44,30 @@ train_params = dict(
     learning_rate = 1e-3, # 1e-2 is the ASMG MF implementation
     model_checkpoint_dir = './../../model/MF/IU',
     model_filename_stem = 'first_mf',
-    seed=6202
+    seed=6202,
+    save_model=False,
+    save_result=True
 )
 model_params = dict(
+    alias="MF",
     n_users=43183,
     n_items=51149,
     n_latents=8
 )
+get_model(model_params)
 
 
-# In[ ]:
+# In[3]:
 
 
 # initialize training components
 torch.manual_seed(train_params["seed"])
-model = MF(
-    model_params["n_users"], model_params["n_items"], model_params["n_latents"]
-    ).to(device)
+model = get_model(model_params).to(device)
 loss_function = nn.BCELoss()
 optimizer = optim.Adam(model.parameters(), lr=train_params["learning_rate"])
 
 
-# In[ ]:
+# In[4]:
 
 
 
@@ -108,7 +103,8 @@ for test_period in range(
             f"test period: {test_period}", sep="\n")
 
     # make checkpoint dir
-    model_checkpoint_subdir = f'{train_params["model_checkpoint_dir"]}/'        f'{timestamp}/T{test_period}'
+    model_checkpoint_subdir = f'{train_params["model_checkpoint_dir"]}/'        f'{timestamp}' + (
+            f'/T{test_period}' if train_params["save_model"] else "")
     if not os.path.exists(model_checkpoint_subdir):
         os.makedirs(model_checkpoint_subdir) 
 
@@ -125,9 +121,6 @@ for test_period in range(
 
     # train
     for epoch in epoch_iterator:
-
-        if not do_train:
-            break
 
         cum_epoch_loss = 0.
         running_loss = 0.
@@ -174,7 +167,7 @@ for test_period in range(
         res_dict["testPeriod"].append(test_period)
         res_dict["trainLoss"].append(epoch_loss)
 
-    if do_train:
+    if train_params["save_model"]:
 
         # save model
         torch.save(model.state_dict(), model_checkpoint_path)
@@ -186,22 +179,8 @@ for test_period in range(
                 {**train_params, **model_params}, 
                 model_checkpoint_path.replace(".pth", "").replace(
                     f"/T{test_period}", ""))
-    elif do_test:
-
-        # load model for test
-        model = MF(
-            model_params["n_users"], model_params["n_items"], model_params["n_latents"])
-        try:
-            model.load_state_dict(torch.load(model_checkpoint_path))
-            print("loaded model:", model_checkpoint_path)
-        except FileNotFoundError:
-            latest_checkpoint_path = get_path_from_re(
-                f'{model_checkpoint_subdir}/'f'{train_params["model_filename_stem"]}*.pth')
-            model.load_state_dict(torch.load(latest_checkpoint_path))
-            print("loaded model:", latest_checkpoint_path)
 
     # test
-
     test_dataloader = DataLoader(
         test_data, batch_size=train_params["batch_size"], shuffle=False,
         num_workers=os.cpu_count())
@@ -251,8 +230,8 @@ else:
     average_srs.at["testPeriod"] = f'mean.ge({train_params["test_start_period"]})'
     print(average_srs)
 
-
-    pd.concat((res_df, average_srs.to_frame().T), axis=0, ignore_index=True
-    ).to_csv(df_path, index=False)
-    print(f"saved results csv at: {os.path.abspath(df_path)}")
+    if train_params["save_result"]:
+        pd.concat((res_df, average_srs.to_frame().T), axis=0, ignore_index=True
+        ).to_csv(df_path, index=False)
+        print(f"saved results csv at: {os.path.abspath(df_path)}")
 
