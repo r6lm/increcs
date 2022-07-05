@@ -2,27 +2,35 @@ from turtle import forward
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.optim as optim
 import numpy as np
+from pytorch_lightning import LightningModule
 
 
-def get_model(model_params):
+def get_model(params):
     """Acts as lookup table of all the models that are implemented in 
     the module."""
 
-    if model_params["alias"] == "MF":
+    if params["alias"] == "MF":
         return MF(
-            model_params["n_users"], model_params["n_items"],
-            model_params["n_latents"])
-    elif model_params["alias"] == "SP":
+            params["n_users"], params["n_items"],
+            params["n_latents"], learning_rate=params["learning_rate"], 
+            l2_regularization_constant=params["l2_regularization_constant"])
+    elif params["alias"] == "SP":
         return SingleParam()
-    elif model_params["alias"] == "UP":
-        return UserParam(model_params["n_users"])
-    elif model_params["alias"] == "IP":
-        return ItemParam(model_params["n_items"])
+    elif params["alias"] == "UP":
+        return UserParam(params["n_users"])
+    elif params["alias"] == "IP":
+        return ItemParam(params["n_items"])
 
 
-class MF(nn.Module):
-    def __init__(self, n_users, n_items, n_latent):
+class MF(LightningModule):
+    def __init__(self, n_users, n_items, n_latent, learning_rate=1e-3,
+                 l2_regularization_constant=1e-1):
+
+        # initialize hyperparameters
+        self.learning_rate = learning_rate
+        self.l2_regularization_constant = l2_regularization_constant
 
         # initialize variables
         super(MF, self).__init__()
@@ -40,7 +48,12 @@ class MF(nn.Module):
         self.n_items = n_items
         self.n_latent = n_latent
 
-    def forward(self, user_ids, item_ids):
+    def forward(self, x):
+        # parse input
+        user_ids = x[:, 0].squeeze()
+        item_ids = x[:, 1].squeeze()
+
+        # compute logits
         user_bias = self.user_bias_emb(user_ids).squeeze()
         item_bias = self.item_bias_emb(item_ids).squeeze()
         user_latent = self.user_latent_emb(user_ids)
@@ -57,6 +70,53 @@ class MF(nn.Module):
         # set bias initialization to zero
         nn.init.zeros_(self.user_bias_emb.weight)
         nn.init.zeros_(self.item_bias_emb.weight)
+
+    def training_step(self, batch, batch_idx):
+
+        # parse input
+        x = batch[0][:, 0:2]
+        y = batch[1]
+
+        # get loss
+        scores = self(x)
+        ce_loss = F.binary_cross_entropy(scores, y)
+        # l2_loss =  torch.norm(self.user_latent_emb) + torch.norm(
+        #     self.item_latent_emb) + torch.sum(self.user_bias_emb ** 2) + \
+        #         torch.sum(self.item_bias_emb ** 2)
+        loss = ce_loss  # + self.l2_regularization_constant * l2_loss
+
+        self.log("train_loss", ce_loss, on_step=False, on_epoch=True)
+
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+
+        # parse input
+        x = batch[0][:, 0:2]
+        y = batch[1]
+
+        # get loss
+        scores = self(x)
+        loss = F.binary_cross_entropy(scores, y)
+
+        self.log("val_loss", loss)
+
+    def test_step(self, batch, batch_idx):
+
+        # parse input
+        x = batch[0][:, 0:2]
+        y = batch[1]
+
+        # get loss
+        scores = self(x)
+        test_loss = F.binary_cross_entropy(scores, y)
+
+        self.log("test_loss", test_loss)
+
+    def configure_optimizers(self):
+        return optim.Adam(
+            self.parameters(), lr=self.learning_rate,
+            weight_decay=self.l2_regularization_constant)
 
 
 class SingleParam(nn.Module):
