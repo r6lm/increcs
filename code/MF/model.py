@@ -14,7 +14,10 @@ def get_model(params):
     if params["alias"] == "MF":
         return MF(
             params["n_users"], params["n_items"],
-            params["n_latents"], learning_rate=params["learning_rate"], 
+            params["n_latents"], 
+            params["batch_size"], params["n_epochs_offline"], 
+            params["n_epochs_online"], params["early_stopping_online"],
+            learning_rate=params["learning_rate"], 
             l2_regularization_constant=params["l2_regularization_constant"])
     elif params["alias"] == "SP":
         return SingleParam()
@@ -25,8 +28,12 @@ def get_model(params):
 
 
 class MF(LightningModule):
-    def __init__(self, n_users, n_items, n_latent, learning_rate=1e-3,
-                 l2_regularization_constant=1e-1):
+    def __init__(
+        self, n_users, n_items, n_latent, 
+        batch_size, n_epochs_offline, n_epochs_online, 
+        early_stopping_online,
+        learning_rate=1e-3,
+        l2_regularization_constant=1e-1):
 
         # initialize hyperparameters
         self.learning_rate = learning_rate
@@ -47,6 +54,9 @@ class MF(LightningModule):
         self.n_users = n_users
         self.n_items = n_items
         self.n_latent = n_latent
+
+        # required by loading from checkpoint (LightningModule)
+        self.save_hyperparameters() 
 
     def forward(self, x):
         # parse input

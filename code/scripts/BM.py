@@ -1,11 +1,32 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+# # Overview
+# 
+# The BM routine can be run in two modes:
+# 
+# - hyperparameter tunning: use the validation cycle to find the most appropriate hyperparameters
+# ```python
+#     validation_start_period=<int>,
+#     validation_end_period=<int>,
+#     test_start_period=None,
+#     test_end_period=None,
+#     max_epochs=<int ge 30>,
+# ```
+# - test: obtain the performance metrics on the test cycle
+# ```python
+#     validation_start_period=None,
+#     validation_end_period=None,
+#     test_start_period=<int>,
+#     test_end_period=<int>,
+#     max_epochs=<int> # selected through validation
+# ```
+
 # In[ ]:
 
 
-# get_ipython().run_line_magic('load_ext', 'autoreload')
-# get_ipython().run_line_magic('autoreload', '2')
+get_ipython().run_line_magic('load_ext', 'autoreload')
+get_ipython().run_line_magic('autoreload', '2')
 
 import numpy as np
 import pandas as pd
@@ -43,12 +64,12 @@ print(f'{device = }')
 
 train_params = dict(
     input_path="../../data/preprocessed/ml_processed.csv",
-    validation_start_period=None,
-    validation_end_period=None,
-    test_start_period=25,
-    test_end_period=31,  # 25
+    validation_start_period=11,
+    validation_end_period=11,
+    test_start_period=None,
+    test_end_period=None,  # 25
     train_window=10,
-    max_epochs=20,  # 20
+    max_epochs=30,  # 20
     batch_size=1024,
     learning_rate=1e-3,  # 1e-2 is the ASMG MF implementation
     model_filename_stem='first_mf',
@@ -89,13 +110,13 @@ train_hparams = {'learning_rate': train_params["learning_rate"],
                 "l2_regularization_constant"]}
 
 
-# # train
+# # validation
 
 # In[ ]:
 
 
 if train_params["validation_start_period"] is not None:
-    
+
     # BU validation regime routine
     for val_period in range(
             train_params["validation_start_period"], train_params["validation_end_period"] + 1):
@@ -118,10 +139,13 @@ if train_params["validation_start_period"] is not None:
             max_epochs=train_params["max_epochs"], reload_dataloaders_every_n_epochs=1,
             enable_checkpointing=train_params["save_model"],
             default_root_dir=model_checkpoint_subdir,
+            enable_model_summary=(
+                True if val_period == train_params["validation_start_period"]
+                else False),
             callbacks=[
                 early_stopping, progress_bar]
         )
-        
+
         # load datsets
         train_dm = ASMGMLDataModule(
             train_params["input_path"], train_params["batch_size"],
@@ -177,7 +201,7 @@ if train_params["test_start_period"] is not None:
                 max_epochs=train_params["max_epochs"], reload_dataloaders_every_n_epochs=1,
                 enable_checkpointing=train_params["save_model"],
                 default_root_dir=model_checkpoint_subdir,
-                logger=False,
+                logger=False, enable_model_summary=False,
                 callbacks=[progress_bar]
             )
 
