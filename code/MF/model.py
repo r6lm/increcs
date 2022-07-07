@@ -7,24 +7,25 @@ import numpy as np
 from pytorch_lightning import LightningModule
 
 
-def get_model(params):
+def get_model(params, return_instance=True):
     """Acts as lookup table of all the models that are implemented in 
     the module."""
 
     if params["alias"] == "MF":
-        return MF(
+        return (MF(
             params["n_users"], params["n_items"],
             params["n_latents"], 
             params["batch_size"], params["n_epochs_offline"], 
             params["n_epochs_online"], params["early_stopping_online"],
             learning_rate=params["learning_rate"], 
             l2_regularization_constant=params["l2_regularization_constant"])
+            if return_instance else MF)
     elif params["alias"] == "SP":
-        return SingleParam()
+        return (SingleParam() if return_instance else SingleParam)
     elif params["alias"] == "UP":
-        return UserParam(params["n_users"])
+        return (UserParam(params["n_users"]) if return_instance else UserParam)
     elif params["alias"] == "IP":
-        return ItemParam(params["n_items"])
+        return (ItemParam(params["n_items"]) if return_instance else ItemParam)
 
 
 class MF(LightningModule):

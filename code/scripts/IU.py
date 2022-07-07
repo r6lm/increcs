@@ -17,7 +17,7 @@ from dataset.ASMGMovieLens import ASMGMLDataModule
 from utils.save import get_timestamp, save_as_json, get_path_from_re, get_version
 
 from torch.utils.data import DataLoader
-from MF.model import get_model
+from MF.model import get_model, MF
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import TQDMProgressBar
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
@@ -50,7 +50,7 @@ train_params = dict(
     train_window=10,
     seed=6202,
     model_filename='first_mf',
-    base_path=None, #"../../model/MF/IU/base/220705T201111/first_mf.ckpt",
+    base_path=None,  # "../../model/MF/IU/base/220707T162306/first_mf.ckpt",
     save_model=False,
     save_result=True
 )
@@ -64,9 +64,9 @@ model_params = dict(
     # moved
     learning_rate=1e-3,  # 1e-2 is the ASMG MF implementation
     batch_size=1024,
-    n_epochs_offline=14,
+    n_epochs_offline=20,
     n_epochs_online=5,
-    early_stopping_online=train_params["test_start_period"] is None,
+    early_stopping_online=False # train_params["test_start_period"] is None,
 )
 train_params["model_checkpoint_dir"] = f'./../../model/{model_params["alias"]}/IU'
 
@@ -74,7 +74,11 @@ train_params["model_checkpoint_dir"] = f'./../../model/{model_params["alias"]}/I
 experiment_params = {**model_params, **train_params}
 
 # run n batches on each Trainer (enabled by lighning)
-fast_dev_run = False
+fast_dev_run = False # early_stopping_online 
+
+# ensure fast dev and early stopping are not both true because the logged losses 
+# do not exist
+assert not (fast_dev_run and model_params["early_stopping_online"])
 
 
 # In[ ]:
@@ -82,7 +86,7 @@ fast_dev_run = False
 
 # initialize training components
 torch.manual_seed(train_params["seed"])
-model = get_model({**model_params, **train_params})#.to(device)
+model = get_model(model_params)#.to(device)
 
 
 # progess log
@@ -121,7 +125,7 @@ if train_params["base_path"] is None:
         max_epochs=model_params["n_epochs_offline"],
         reload_dataloaders_every_n_epochs=1, enable_checkpointing=False,
         default_root_dir=model_checkpoint_subdir, logger=False, callbacks=[
-            progress_bar], fast_dev_run=fast_dev_run
+            progress_bar], fast_dev_run=fast_dev_run, deterministic=True
     )
     
     # load datsets
@@ -143,7 +147,12 @@ if train_params["base_path"] is None:
 
 else:
     print("loading base model at:", train_params["base_path"])
-    model.load_from_checkpoint(checkpoint_path=train_params["base_path"])
+    model = get_model(
+        experiment_params, return_instance=False).load_from_checkpoint(
+            checkpoint_path=train_params["base_path"])
+
+# ensure reproducibility
+torch.manual_seed(train_params["seed"])
 
 
 # # transfer
@@ -168,8 +177,8 @@ transfer_callbacks = [progress_bar]
 
 # IU validation routine
 for val_period in range(
-        train_params["val_start_period"] + 1,
-        train_params["val_end_period"] + 1):
+    train_params["val_start_period"] + 1,
+    train_params["val_end_period"] + 1):
 
     # update periods
     train_period = val_period - 1
@@ -207,7 +216,7 @@ for val_period in range(
     if model_params["early_stopping_online"]:
         early_stopping = EarlyStopping(
             monitor="val_loss", mode="min", verbose=True, min_delta=1e-4)
-        transfer_callbacks = transfer_callbacks.append(early_stopping)
+        transfer_callbacks.append(early_stopping)
 
     val_trainer = Trainer(
         accelerator="auto", devices=1 if torch.cuda.is_available() else 0,
@@ -216,7 +225,7 @@ for val_period in range(
         enable_checkpointing=train_params["save_model"],
         default_root_dir=model_checkpoint_subdir, logger=logger,
         callbacks=transfer_callbacks, enable_model_summary=False,
-        fast_dev_run=fast_dev_run)
+        fast_dev_run=fast_dev_run, deterministic=True)
 
     # load datsets
     train_dm = ASMGMLDataModule(
@@ -233,11 +242,15 @@ for val_period in range(
         early_stopping.best_score if model_params[
             "early_stopping_online"] else val_trainer.logged_metrics[
                 "val_loss"]).item()
+    n_epochs_dict = {}
     if model_params["early_stopping_online"]:
-        model_params["n_epochs_online"] = val_trainer.current_epoch - (
+        n_epochs_dict["n_epochs_online"] = val_trainer.current_epoch - (
             early_stopping.patience)
     val_trainer.logger.log_hyperparams(
-        model_params,
+        {
+            **model_params,
+            **n_epochs_dict
+        },
         metrics=val_score)
 
     val_list.append({
@@ -287,13 +300,14 @@ if train_params["test_start_period"] is not None:
         #     f'{train_params["model_filename_stem"]}.pth'
 
         test_trainer = Trainer(
-                accelerator="auto", devices=1 if torch.cuda.is_available() else 0,
-                max_epochs=model_params["n_epochs_online"], reload_dataloaders_every_n_epochs=1,
-                enable_checkpointing=train_params["save_model"],
-                default_root_dir=model_checkpoint_subdir,
-                logger=False, enable_model_summary=False,
-                callbacks=[progress_bar], fast_dev_run = fast_dev_run
-            )
+            accelerator="auto", devices=1 if torch.cuda.is_available() else 0,
+            max_epochs=model_params["n_epochs_online"], reload_dataloaders_every_n_epochs=1,
+            enable_checkpointing=train_params["save_model"],
+            default_root_dir=model_checkpoint_subdir,
+            logger=False, enable_model_summary=False,
+            callbacks=[progress_bar], fast_dev_run = fast_dev_run, 
+            deterministic=True
+        )
 
         # load datsets 
         train_dm = ASMGMLDataModule(

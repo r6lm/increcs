@@ -143,7 +143,7 @@ if train_params["validation_start_period"] is not None:
                 True if val_period == train_params["validation_start_period"]
                 else False),
             callbacks=[
-                early_stopping, progress_bar]
+                early_stopping, progress_bar], deterministic=True
         )
 
         # load datsets
@@ -174,6 +174,9 @@ else:
 # In[ ]:
 
 
+# ensure reproducibility
+torch.manual_seed(train_params["seed"])
+
 if train_params["test_start_period"] is not None:
     
     # BU test routine
@@ -202,7 +205,7 @@ if train_params["test_start_period"] is not None:
                 enable_checkpointing=train_params["save_model"],
                 default_root_dir=model_checkpoint_subdir,
                 logger=False, enable_model_summary=False,
-                callbacks=[progress_bar]
+                callbacks=[progress_bar], deterministic=True
             )
 
         # load datsets 
