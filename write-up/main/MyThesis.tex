@@ -20,6 +20,41 @@
 \numberwithin{Algorithm}{section}
 \numberwithin{equation}{section}
 
+% include subsubsections on TOC
+\setcounter{tocdepth}{3}
+\setcounter{secnumdepth}{3}
+
+% hyperlinks
+\usepackage{hyperref}
+
+% accronyms and definitions
+\usepackage[acronym,automake,nonumberlist]{glossaries}
+
+\makeglossaries
+
+\newglossaryentry{latex}
+{
+        name=latex,
+        description={Is a mark up language specially suited for 
+scientific documents}
+}
+
+\newglossaryentry{maths}
+{
+        name=mathematics,
+        description={Mathematics is what mathematicians do}
+}
+
+\newglossaryentry{formula}
+{
+        name=formula,
+        description={A mathematical expression}
+}
+
+\newacronym{gcd}{GCD}{Greatest Common Divisor}
+
+\newacronym{lcm}{LCM}{Least Common Multiple}
+
 
 \begin{document}
 
@@ -44,7 +79,7 @@
 \textbf{\LARGE{Rodrigo LARA MOLINA}}\\
 \vspace{6.5em}
 \Large{Dissertation Presented for the Degree of\\
-MSc in Statitics with Data Science)}\\
+MSc in Statitics with Data Science}\\
 \vspace{6.5em}
 \Large{August 2019}\\
 \vspace{3em}
@@ -96,6 +131,9 @@ Here comes your own work declaration
 \clearpage
 \listoftables
 \listoffigures
+\printglossary[type=\acronymtype]
+\printglossary[title=Special Terms]
+\clearpage
 \cleardoublepage
 
 \pagenumbering{arabic}
@@ -106,46 +144,155 @@ Here comes your own work declaration
 \clearpage
 
 \section{Introduction}
-\label{sec.intro}
+\label{sec:intro}
 
 Here I will write a very good, precise and brief introduction.
 Particularly Section \ref{sec:background} is good!
-\clearpage
 
-\section{Background}
-\label{sec:background}
+The \Gls{latex} typesetting markup language is specially suitable 
+for documents that include \gls{maths}. \Glspl{formula} are 
+rendered properly an easily once one gets used to the commands.
 
-In the following, I explain some background stuff. I should really cut this short, but BlaBlaBlaBla BlaBlaBlaBlaBla Bla Bla BlaBlaBla Bla Bla BlaBlaBla Bla BlaBla BlaBla Bla BlaBlaBlaBla Bla BlaBla Bla Bla Bla BlaBla BlaBlaBlaBla BlaBlaBlaBlaBla Bla Bla BlaBlaBla Bla. Bla BlaBlaBla Bla BlaBla BlaBla Bla BlaBlaBlaBla Bla BlaBla Bla Bla Bla BlaBla BlaBlaBlaBla. BlaBlaBlaBlaBla Bla Bla BlaBlaBla Bla Bla BlaBlaBla Bla BlaBla BlaBla Bla BlaBlaBlaBla Bla BlaBla Bla Bla Bla BlaBla BlaBlaBlaBla BlaBlaBlaBlaBla Bla Bla BlaBlaBla Bla Bla BlaBlaBla Bla BlaBla BlaBla Bla BlaBlaBlaBla Bla BlaBla Bla Bla Bla BlaBla BlaBlaBlaBla BlaBlaBlaBlaBla Bla Bla BlaBlaBla Bla Bla BlaBlaBla Bla BlaBla BlaBla Bla. BlaBlaBlaBla Bla BlaBla Bla Bla Bla BlaBla BlaBlaBlaBla BlaBlaBlaBlaBla Bla Bla BlaBlaBla Bla Bla BlaBlaBla Bla BlaBla BlaBla Bla BlaBlaBlaBla Bla BlaBla Bla Bla Bla BlaBla.
+Given a set of numbers, there are elementary methods to compute 
+its \acrlong{gcd}, which is abbreviated \acrshort{gcd}. This 
+process is similar to that used for the \acrfull{lcm}.
 
-Note that I start a new paragraph when I have an empty line like this. BlaBlaBlaBla BlaBlaBlaBlaBla Bla Bla BlaBlaBla Bla Bla BlaBlaBla Bla BlaBla BlaBla Bla BlaBlaBlaBla Bla BlaBla Bla Bla Bla. BlaBla BlaBlaBlaBla BlaBlaBlaBlaBla Bla Bla BlaBlaBla Bla Bla BlaBlaBla Bla BlaBla BlaBla Bla BlaBlaBlaBla Bla BlaBla Bla Bla Bla BlaBla BlaBlaBlaBla BlaBlaBlaBlaBla Bla Bla BlaBlaBla Bla Bla BlaBlaBla. Bla BlaBla BlaBla Bla BlaBlaBlaBla Bla BlaBla Bla Bla Bla BlaBla BlaBlaBlaBla BlaBlaBlaBlaBla Bla Bla BlaBlaBla Bla Bla BlaBlaBla Bla. BlaBla BlaBla Bla BlaBlaBlaBla Bla BlaBla Bla Bla Bla BlaBla BlaBlaBlaBla BlaBlaBlaBlaBla Bla Bla BlaBlaBla Bla Bla BlaBlaBla Bla BlaBla BlaBla Bla BlaBlaBlaBla Bla BlaBla Bla Bla Bla BlaBla.\\
-But I can also end a line with a double backslash.
-\clearpage
-
-\subsection{Models}
-\label{sec:Models}
-
-Models are \emph{very} helpful because.
-\begin{itemize}
- \item They're good.
- \item They're helpful.
-\end{itemize}
-\clearpage
-
-\subsection{Techniques}
-\label{sec:Techniques}
+\subsection{Problem Statement}
+\label{sec:problem}
 
 Techniques even better because.
 \begin{enumerate}
  \item They're magnificent.
  \item If they work.
 \end{enumerate}
+
+\subsection{Objectives}
+\label{sec:objective}
+
+Techniques even better because.
+\begin{enumerate}
+ \item They're magnificent.
+ \item If they work.
+\end{enumerate}
+
+\subsection{Disseration Outline}
+\label{sec:outline}
+
+Techniques even better because.
+\begin{enumerate}
+ \item They're magnificent.
+ \item If they work.
+\end{enumerate}
+
 \clearpage
 
-\section{Technical Stuff}
+
+
+\section{Background and Related Work}
+\label{sec:background}
+
+In the following, I explain some background stuff. I should really cut this short, but BlaBlaBlaBla BlaBlaBlaBlaBla Bla Bla BlaBlaBla Bla Bla BlaBlaBla Bla BlaBla BlaBla Bla BlaBlaBlaBla Bla BlaBla Bla Bla Bla BlaBla BlaBlaBlaBla BlaBlaBlaBlaBla Bla Bla BlaBlaBla Bla. Bla BlaBlaBla Bla BlaBla BlaBla Bla BlaBlaBlaBla Bla BlaBla Bla Bla Bla BlaBla BlaBlaBlaBla. BlaBlaBlaBlaBla Bla Bla BlaBlaBla Bla Bla BlaBlaBla Bla BlaBla BlaBla Bla BlaBlaBlaBla Bla BlaBla Bla Bla Bla BlaBla BlaBlaBlaBla BlaBlaBlaBlaBla Bla Bla BlaBlaBla Bla Bla BlaBlaBla Bla BlaBla BlaBla Bla BlaBlaBlaBla Bla BlaBla Bla Bla Bla BlaBla BlaBlaBlaBla BlaBlaBlaBlaBla Bla Bla BlaBlaBla Bla Bla BlaBlaBla Bla BlaBla BlaBla Bla. BlaBlaBlaBla Bla BlaBla Bla Bla Bla BlaBla BlaBlaBlaBla BlaBlaBlaBlaBla Bla Bla BlaBlaBla Bla Bla BlaBlaBla Bla BlaBla BlaBla Bla BlaBlaBlaBla Bla BlaBla Bla Bla Bla BlaBla.
+
+
+But I can also end a line with a double backslash.
+
+\clearpage
+
+\subsection{Recommender Systems}
+\label{sec:rec-sys}
+
+Techniques even better because.
+\begin{enumerate}
+ \item They're magnificent.
+ \item If they work.
+\end{enumerate}
+
+\subsubsection{Neural Recommender Systems}
+\label{sec:nn-rs}
+
+Techniques even better because.
+\begin{enumerate}
+ \item They're magnificent.
+ \item If they work.
+\end{enumerate}
+
+
+\subsubsection{Performance Metrics for Binary Classification}
+\label{sec:perf-met}
+
+Techniques even better because.
+\begin{enumerate}
+ \item They're magnificent.
+ \item If they work.
+\end{enumerate}
+
+\clearpage
+
+\subsection{Incremental Learning}
+\label{sec:inc-learn}
+
+Models are \emph{very} helpful because.
+\begin{itemize}
+ \item They're good.
+ \item They're helpful.
+\end{itemize}
+
+\subsubsection{Sample-based Incremental Learning}
+\label{sec:sample-based}
+
+Models are \emph{very} helpful because.
+\begin{itemize}
+ \item They're good.
+ \item They're helpful.
+\end{itemize}
+
+\subsubsection{Model-based Incremental Learning}
+\label{sec:model-based}
+
+Models are \emph{very} helpful because.
+\begin{itemize}
+ \item They're good.
+ \item They're helpful.
+\end{itemize}
+
+\subsubsection{Bayesian Incremental Learning}
+\label{sec:bayes-il}
+
+Models are \emph{very} helpful because.
+\begin{itemize}
+ \item They're good.
+ \item They're helpful.
+\end{itemize}
+
+\clearpage
+
+\subsection{Variational Inference}
+\label{sec:var-inf}
+
+Techniques even better because.
+\begin{enumerate}
+ \item They're magnificent.
+ \item If they work.
+\end{enumerate}
+
+\subsubsection{Stochastic Variational Inference}
+\label{sec:svi}
+
+Models are \emph{very} helpful because.
+\begin{itemize}
+ \item They're good.
+ \item They're helpful.
+\end{itemize}
+
+\clearpage
+
+\section{Experiments}
+\label{sec:exp}
 
 Now it's getting very technical \ldots{} I will cite \cite{shiina,groewe2001}. I will also show my incredible $\alpha$, $\beta$ and $\gamma$ mathematics and do some other fancy stuff.
 
-\subsection{Formulae}
+\subsection{Data}
+\label{sec:data}
 
 For example look at this
 \begin{equation}\label{eqn:aProblem}
@@ -209,9 +356,12 @@ B_{l12}\sin{}(\bar{\delta{}}_{F(l)}-\bar{\delta{}}_{T(l)})
       \end{array}\right],\notag
 \end{eqnarray}
 This is a lot of fun!
+
 \clearpage
 
-\subsection{Important Things}
+\subsection{Base Model}
+\label{sec:base-mod}
+
 Finally we should have a nice picture like this one. However, I won't forget that figures and table are environments which float around in my document. So LaTeX will place them wherever it thinks they fit well with the surrounding text. I can try to change that with a float specifier, e.g. [!ht].
 %This is a comment. The Compiler ignores it. It is here to remind me that, if I use a .jpeg or .png picture file as below I will need to compile the document with the pdflatex compiler.
 \begin{figure}[!ht]
@@ -247,7 +397,8 @@ Case&Generators&Therm. Units&Lines&Peak load: [MW]&[MVar]\\
 \end{table}
 I should really refer to Table \ref{tab:things}.
 
-\subsection{And now something else}
+\subsection{Training Regimes}
+\label{sec:train-reg}
 
 \noindent
 Let:
@@ -294,10 +445,43 @@ $\overline{\Omega}_1 \subseteq  \overline{\Omega}_0 $.
 \textbf{Proof.}
 Homework
 \hfill $\square$
+
+\subsubsection{Baselines}
+\label{sec:baselines}
+
+Models are \emph{very} helpful because.
+\begin{itemize}
+ \item They're good.
+ \item They're helpful.
+\end{itemize}
+
+\subsubsection{Bayesian Incremental Update}
+\label{sec:biu}
+
+Models are \emph{very} helpful because.
+\begin{itemize}
+ \item They're good.
+ \item They're helpful.
+\end{itemize}
+
+\subsection{Results and Discussion}
+\label{sec:res}
+
+Techniques even better because.
+\begin{enumerate}
+ \item They're magnificent.
+ \item If they work.
+\end{enumerate}
+
 \cleardoublepage
 
+\section{Conclusions and Future Work}
+\subsection{Conclusions}
+\label{sec:conc}
+I have no idea how to conclude, so I don't write much. But the stuff that follows is important.
 
-\section{Conclusions}
+\subsection{Future work}
+\label{sec:fut-work}
 I have no idea how to conclude, so I don't write much. But the stuff that follows is important.
 \clearpage
 
