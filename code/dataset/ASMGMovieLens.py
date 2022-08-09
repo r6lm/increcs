@@ -76,10 +76,10 @@ class ASMGMLDataModule(LightningDataModule):
 
     def val_dataloader(self):
         return DataLoader(
-            self.val_dataset, batch_size=self.batch_size,
+            self.val_dataset, batch_size=self.batch_size, shuffle=False,
             num_workers=os.cpu_count())
 
     def test_dataloader(self):
         return DataLoader(
-            self.test_dataset, batch_size=self.batch_size,
+            self.test_dataset, batch_size=self.batch_size, shuffle=False,
             num_workers=os.cpu_count())
