@@ -449,3 +449,4 @@ data/preprocessed/*
 model
 code/pocket.py
 code/pocket.txt
+jobs/*/BM-*.*
