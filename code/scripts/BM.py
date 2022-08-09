@@ -36,6 +36,11 @@ parser.add_argument(
 parsed_args = parser.parse_args()
 parsed_args
 
+# fast access parameters
+validation_mode = False
+fast_dev_run = False
+run_on_eddie = True
+
 
 # In[ ]:
 
@@ -75,15 +80,8 @@ print(f'{device = }')
 # timestamp = get_timestamp()
 
 
-# # control flow parameters
+# # Parameters
 # 
-
-# In[ ]:
-
-
-validation_mode = False
-fast_dev_run=False
-
 
 # In[ ]:
 
@@ -227,11 +225,12 @@ if train_params["validation_start_period"] is not None:
         # load datsets
         train_dm = ASMGMLDataModule(
             train_params["input_path"], train_params["batch_size"],
-            train_window_begin, train_window_end, period_val=val_period)
+            train_window_begin, train_window_end, period_val=val_period,
+            run_on_eddie=run_on_eddie)
 
         # train
         val_trainer.fit(
-            model, datamodule=train_dm)
+            model, datamodule=train_dm, run_on_eddie=run_on_eddie)
         print(f"finished val_period {val_period}")
 
         # log hyperparameters
@@ -290,9 +289,10 @@ if train_params["test_start_period"] is not None:
         # load datsets 
         train_dm = ASMGMLDataModule(
             train_params["input_path"], train_params["batch_size"], 
-            train_window_begin, train_window_end)
+            train_window_begin, train_window_end, run_on_eddie=run_on_eddie)
         test_dm = ASMGMLDataModule(
-            train_params["input_path"], train_params["batch_size"], test_period)
+            train_params["input_path"], train_params["batch_size"], test_period,
+            run_on_eddie=run_on_eddie)
 
         # train
         start_training_time = time()

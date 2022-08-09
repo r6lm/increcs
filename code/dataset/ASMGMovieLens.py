@@ -46,13 +46,14 @@ if __name__ == "__main__":
 class ASMGMLDataModule(LightningDataModule):
     def __init__(
             self, input_path, batch_size: int, period_start, period_end: int = None,
-            period_val: int = None):
+            period_val: int = None, run_on_eddie: bool=False):
         super().__init__()
         self.input_path = input_path
         self.batch_size = batch_size
         self.period_start = period_start
         self.period_end = period_end
         self.period_val = period_val
+        self.run_on_eddie = run_on_eddie
 
     def setup(self, stage: Optional[str] = "fit"):
 
@@ -72,14 +73,14 @@ class ASMGMLDataModule(LightningDataModule):
     def train_dataloader(self):
         return DataLoader(
             self.train_dataset, batch_size=self.batch_size, shuffle=True,
-            num_workers=os.cpu_count())
+            num_workers=1 if self.run_on_eddie else os.cpu_count())
 
     def val_dataloader(self):
         return DataLoader(
             self.val_dataset, batch_size=self.batch_size, shuffle=False,
-            num_workers=os.cpu_count())
+            num_workers=1 if self.run_on_eddie else os.cpu_count())
 
     def test_dataloader(self):
         return DataLoader(
             self.test_dataset, batch_size=self.batch_size, shuffle=False,
-            num_workers=os.cpu_count())
+            num_workers=1 if self.run_on_eddie else os.cpu_count())
