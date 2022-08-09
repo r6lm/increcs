@@ -82,7 +82,7 @@ print(f'{device = }')
 
 
 validation_mode = False
-fast_dev_run=True
+fast_dev_run=False
 
 
 # In[ ]:
