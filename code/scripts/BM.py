@@ -25,17 +25,35 @@
 # In[ ]:
 
 
-get_ipython().run_line_magic('load_ext', 'autoreload')
-get_ipython().run_line_magic('autoreload', '2')
+import argparse
+
+# parameters to tune on Eddie
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--seed", default="6202", help="random seed for reproducibility")
+
+# parsed_args = parser.parse_args([])
+parsed_args = parser.parse_args()
+parsed_args
+
+
+# In[ ]:
+
+
+# get_ipython().run_line_magic('load_ext', 'autoreload')
+# get_ipython().run_line_magic('autoreload', '2')
 
 import numpy as np
 import pandas as pd
 import torch, torch.optim as optim, torch.nn as nn
 import sys, os
 from collections import defaultdict
+from time import time
+from sklearn.metrics import roc_auc_score
 sys.path.append("./..") # \todo: change for relative import
 from dataset.ASMGMovieLens import ASMGMLDataModule
-from utils.save import get_timestamp, save_as_json, get_path_from_re
+from utils.save import (get_timestamp, save_as_json, get_path_from_re, 
+    append_json_array, load_json_array)
 
 from torch.utils.data import DataLoader
 from MF.model import get_model
@@ -49,6 +67,7 @@ import warnings
 warnings.filterwarnings(
     "ignore", "Total length of `DataLoader` across ranks is zero.*")
 
+start_time = time()
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 print(f'{device = }')
 
@@ -62,18 +81,24 @@ print(f'{device = }')
 # In[ ]:
 
 
+validation_mode = False
+fast_dev_run=True
+
+
+# In[ ]:
+
+
 train_params = dict(
     input_path="../../data/preprocessed/ml_processed.csv",
-    validation_start_period=11,
-    validation_end_period=11,
-    test_start_period=None,
-    test_end_period=None,  # 25
+    validation_start_period=None,
+    validation_end_period=None,
+    test_start_period=25,
+    test_end_period=31,  # 25,
     train_window=10,
-    max_epochs=30,  # 20
     batch_size=1024,
     learning_rate=1e-3,  # 1e-2 is the ASMG MF implementation
     model_filename_stem='first_mf',
-    seed=6202,
+    seed=int(parsed_args.seed),
     save_model=False,
     save_result=True
 )
@@ -83,9 +108,61 @@ model_params = dict(
     n_items=51149,
     n_latents=8,
     l2_regularization_constant=1e-6,
+    n_epochs_offline=20,
 )
 train_params["model_checkpoint_dir"] = f'./../../model/{model_params["alias"]}/BM'
 
+if validation_mode:
+    train_params.update(dict(
+        validation_start_period=11,
+        validation_end_period=11,
+    ))
+    model_params.update(dict(
+        n_epochs_offline=30,
+    ))
+
+# ensure compatibility with IU model implementation
+model_params.update(dict(
+    n_epochs_online=None,
+    early_stopping_online=None
+))
+
+
+# # Custom functions
+
+# In[ ]:
+
+
+def auc(model, y_true, test_loader, batch_size):
+    """
+    Uses scikit-learn roc_auc_score.
+
+    Parameters
+    ----------
+    model 
+    
+    y_true : torch.Tensor
+    test_loader : Dataloader
+        `shuffle` parameter must be False. Order has to be the same than
+        in `` 
+
+    Returns
+    -------
+    float
+    """    
+    preds = torch.ones_like(y_true) * -1
+
+    for i, (x, _) in enumerate(test_loader):
+        preds[
+            i * batch_size:min((i + 1) * batch_size, len(y_true))
+        ] = model(x)
+
+    assert torch.all(preds != -1), "Not all values replaced for predictions."
+
+    return roc_auc_score(y_true, preds)
+
+
+# # Initialize results containers
 
 # In[ ]:
 
@@ -136,14 +213,15 @@ if train_params["validation_start_period"] is not None:
 
         val_trainer = Trainer(
             accelerator="auto", devices=1 if torch.cuda.is_available() else 0,
-            max_epochs=train_params["max_epochs"], reload_dataloaders_every_n_epochs=1,
+            max_epochs=model_params["n_epochs_offline"], reload_dataloaders_every_n_epochs=1,
             enable_checkpointing=train_params["save_model"],
             default_root_dir=model_checkpoint_subdir,
             enable_model_summary=(
                 True if val_period == train_params["validation_start_period"]
                 else False),
             callbacks=[
-                early_stopping, progress_bar], deterministic=True
+                early_stopping, progress_bar], deterministic=True,
+            fast_dev_run=fast_dev_run
         )
 
         # load datsets
@@ -198,15 +276,16 @@ if train_params["test_start_period"] is not None:
 
         # model_checkpoint_path = f'{model_checkpoint_subdir}/' \
         #     f'{train_params["model_filename_stem"]}.pth'
-
         test_trainer = Trainer(
-                accelerator="auto", devices=1 if torch.cuda.is_available() else 0,
-                max_epochs=train_params["max_epochs"], reload_dataloaders_every_n_epochs=1,
-                enable_checkpointing=train_params["save_model"],
-                default_root_dir=model_checkpoint_subdir,
-                logger=False, enable_model_summary=False,
-                callbacks=[progress_bar], deterministic=True
-            )
+            accelerator="auto", 
+            devices=1 if (torch.cuda.is_available() or fast_dev_run) else 0,
+            max_epochs=model_params["n_epochs_offline"], reload_dataloaders_every_n_epochs=1,
+            enable_checkpointing=train_params["save_model"],
+            default_root_dir=model_checkpoint_subdir,
+            logger=False, enable_model_summary=False,
+            callbacks=[progress_bar], deterministic=True, 
+            fast_dev_run=fast_dev_run
+        )
 
         # load datsets 
         train_dm = ASMGMLDataModule(
@@ -216,15 +295,23 @@ if train_params["test_start_period"] is not None:
             train_params["input_path"], train_params["batch_size"], test_period)
 
         # train
+        start_training_time = time()
         test_trainer.fit(
             model, datamodule=train_dm)
-        res_dict["testPeriod"].append(test_period)
+        res_dict["train_time"].append(time() - start_training_time)
+        res_dict["period"].append(test_period)
         res_dict["trainLoss"].append(test_trainer.logged_metrics["train_loss"].item())
         print(f"finished test_period {test_period}")
 
-        # test
+        # get test loss
         test_trainer.test(model, datamodule=test_dm)
-        res_dict["testLoss"].append(test_trainer.logged_metrics["test_loss"].item())
+        res_dict["loss"].append(test_trainer.logged_metrics["test_loss"].item())
+
+        # get test AUC
+        with torch.no_grad():
+            test_auc = auc(model, test_dm.test_dataset.y, test_dm.test_dataloader(), 
+                train_params["batch_size"])
+        res_dict["auc"].append(test_auc)
 
         torch.manual_seed(train_params["seed"])
         model.reset_parameters()
@@ -238,14 +325,40 @@ if train_params["test_start_period"] is not None:
         res_df = pd.DataFrame(res_dict)
 
         average_srs = res_df.mean()
-        average_srs.at["testPeriod"] = "mean"
+        average_srs.at["period"] = "mean"
         print(average_srs)
 
         if train_params["save_result"]: 
             pd.concat((res_df, average_srs.to_frame().T), axis=0, ignore_index=True
             ).to_csv(df_path, index=False)
             print(f"saved results csv at: {os.path.abspath(df_path)}")
+            
+
+        
 
 else:
     print("skipped test cycle")
+
+
+# In[ ]:
+
+
+# define where to save master results
+results_master_path = train_params["model_checkpoint_dir"] + "/results.json"
+
+# concatenate summary results and script args
+res_dict = average_srs.to_dict()
+res_dict.update(**vars(parsed_args), **{
+    "n_epochs_on_test": model_params["n_epochs_offline"],
+    "timestamp": timestamp
+    })
+print(res_dict)
+append_json_array(res_dict, results_master_path)
+load_json_array(results_master_path)
+
+
+# In[ ]:
+
+
+print(f"Total elapsed time: {(time() - start_time) / 3600:.2f} hrs.")
 

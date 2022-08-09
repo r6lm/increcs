@@ -10,7 +10,6 @@ from pytorch_lightning import LightningModule
 def get_model(params, return_instance=True):
     """Acts as lookup table of all the models that are implemented in 
     the module."""
-
     if params["alias"] == "MF":
         return (MF(
             params["n_users"], params["n_items"],
@@ -29,6 +28,8 @@ def get_model(params, return_instance=True):
 
 
 class MF(LightningModule):
+    # several unused parameters are passed on the constructor to make 
+    # them appear in Tensorboard 
     def __init__(
         self, n_users, n_items, n_latent, 
         batch_size, n_epochs_offline, n_epochs_online, 
