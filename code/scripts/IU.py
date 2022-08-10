@@ -405,7 +405,8 @@ results_master_path = train_params["model_checkpoint_dir"] + "/results.json"
 res_dict = average_srs.to_dict()
 res_dict.update(**vars(parsed_args), **{
     "n_epochs_on_test": model_params["n_epochs_offline"],
-    "timestamp": timestamp
+    "timestamp": timestamp,
+    "version": version,
     })
 print(res_dict)
 append_json_array(res_dict, results_master_path)
