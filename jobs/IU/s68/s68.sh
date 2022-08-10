@@ -14,7 +14,7 @@
 # Request 32 GB system RAM 
 # the total system RAM available to the job is the value specified here multiplied by 
 # the number of requested GPUs (above)
-#$ -l h_vmem=32G
+#$ -l h_vmem=40G
 # send emails
 #$ -M ro6lm@outlook.com
 #$ -m beas

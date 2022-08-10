@@ -1,0 +1,54 @@
+{
+    "results": [
+        {
+            "auc": 0.7222102438557947,
+            "loss": 0.6111253329685756,
+            "n_epochs_on_test": 20,
+            "period": "mean",
+            "seed": "6202",
+            "timestamp": "220809T212809",
+            "trainLoss": 0.4483234201158796,
+            "train_time": 622.3899636949811
+        },
+        {
+            "auc": 0.7226538734381004,
+            "loss": 0.6111115302358355,
+            "n_epochs_on_test": 20,
+            "period": "mean",
+            "seed": "8",
+            "timestamp": "220809T223554",
+            "trainLoss": 0.44836034945079256,
+            "train_time": 536.5031554017748
+        },
+        {
+            "auc": 0.7222504841104047,
+            "loss": 0.6113406249455043,
+            "n_epochs_on_test": 20,
+            "period": "mean",
+            "seed": "31",
+            "timestamp": "220809T223916",
+            "trainLoss": 0.44880067876407076,
+            "train_time": 539.3272660459791
+        },
+        {
+            "auc": 0.7227183169832776,
+            "loss": 0.610939451626369,
+            "n_epochs_on_test": 20,
+            "period": "mean",
+            "seed": "68",
+            "timestamp": "220809T224305",
+            "trainLoss": 0.44879820942878723,
+            "train_time": 509.0122392858778
+        },
+        {
+            "auc": 0.7224634305331052,
+            "loss": 0.6110424229076931,
+            "n_epochs_on_test": 20,
+            "period": "mean",
+            "seed": "75",
+            "timestamp": "220809T225639",
+            "trainLoss": 0.4489398854119437,
+            "train_time": 526.6282539708274
+        }
+    ]
+}
