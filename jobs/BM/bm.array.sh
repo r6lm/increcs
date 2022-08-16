@@ -1,4 +1,5 @@
 #!/bin/sh
+# NOTE: couldn't make it work
 # Grid Engine options (lines prefixed with #$)
 #$ -N BM
 #$ -l h_rt=24:00:00

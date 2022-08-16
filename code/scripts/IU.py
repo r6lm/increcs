@@ -17,7 +17,7 @@ parsed_args
 
 # fast access parameters
 validation_mode = False
-fast_dev_run = True
+fast_dev_run = False
 run_on_eddie = True
 
 
