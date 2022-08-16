@@ -2,7 +2,7 @@ import torch
 from sklearn.metrics import roc_auc_score
 
 
-def auc(model, y_true, test_loader, batch_size):
+def auc(model, y_true, test_loader, batch_size, prediction_dst=None):
     """
     Uses scikit-learn roc_auc_score.
 
@@ -27,5 +27,8 @@ def auc(model, y_true, test_loader, batch_size):
         ] = model(x)
 
     assert torch.all(preds != -1.0).item(), "Not all values replaced for predictions."
+
+    if prediction_dst is not None:
+        torch.save(preds, prediction_dst)
 
     return roc_auc_score(y_true, preds)

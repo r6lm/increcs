@@ -3,24 +3,9 @@
 
 # # Overview
 # 
-# The BM routine can be run in two modes:
+# ### update 15/08
+# validation_mode implies the models runs in validation + test set, selecting the median number of epochs from the validation period.
 # 
-# - hyperparameter tunning: use the validation cycle to find the most appropriate hyperparameters
-# ```python
-#     validation_start_period=<int>,
-#     validation_end_period=<int>,
-#     test_start_period=None,
-#     test_end_period=None,
-#     max_epochs=<int ge 30>,
-# ```
-# - test: obtain the performance metrics on the test cycle
-# ```python
-#     validation_start_period=None,
-#     validation_end_period=None,
-#     test_start_period=<int>,
-#     test_end_period=<int>,
-#     max_epochs=<int> # selected through validation
-# ```
 
 # In[ ]:
 
@@ -37,7 +22,7 @@ parsed_args = parser.parse_args()
 parsed_args
 
 # fast access parameters
-validation_mode = False
+validation_mode = True
 fast_dev_run = False
 run_on_eddie = True
 
@@ -59,6 +44,7 @@ sys.path.append("./..") # \todo: change for relative import
 from dataset.ASMGMovieLens import ASMGMLDataModule
 from utils.save import (get_timestamp, save_as_json, get_path_from_re, 
     append_json_array, load_json_array)
+from utils.performance import auc
 
 from torch.utils.data import DataLoader
 from MF.model import get_model
@@ -98,7 +84,8 @@ train_params = dict(
     model_filename_stem='first_mf',
     seed=int(parsed_args.seed),
     save_model=False,
-    save_result=True
+    save_result=True,
+    save_predictions=True,
 )
 model_params = dict(
     alias="MF",
@@ -113,10 +100,10 @@ train_params["model_checkpoint_dir"] = f'./../../model/{model_params["alias"]}/B
 if validation_mode:
     train_params.update(dict(
         validation_start_period=11,
-        validation_end_period=11,
+        validation_end_period=24,
     ))
     model_params.update(dict(
-        n_epochs_offline=30,
+        n_epochs_offline=40,
     ))
 
 # ensure compatibility with IU model implementation
@@ -125,39 +112,10 @@ model_params.update(dict(
     early_stopping_online=None
 ))
 
+# get timestamp
+timestamp = get_timestamp()
 
-# # Custom functions
-
-# In[ ]:
-
-
-def auc(model, y_true, test_loader, batch_size):
-    """
-    Uses scikit-learn roc_auc_score.
-
-    Parameters
-    ----------
-    model 
-    
-    y_true : torch.Tensor
-    test_loader : Dataloader
-        `shuffle` parameter must be False. Order has to be the same than
-        in `` 
-
-    Returns
-    -------
-    float
-    """    
-    preds = torch.ones_like(y_true) * -1
-
-    for i, (x, _) in enumerate(test_loader):
-        preds[
-            i * batch_size:min((i + 1) * batch_size, len(y_true))
-        ] = model(x)
-
-    assert torch.all(preds != -1), "Not all values replaced for predictions."
-
-    return roc_auc_score(y_true, preds)
+params = argparse.Namespace(**train_params, **model_params)
 
 
 # # Initialize results containers
@@ -167,22 +125,23 @@ def auc(model, y_true, test_loader, batch_size):
 
 # initialize training components
 torch.manual_seed(train_params["seed"])
-model = get_model({**model_params, **train_params})#.to(device)
-# loss_function = nn.BCELoss()
-# optimizer = optim.Adam(model.parameters(), lr=train_params["learning_rate"])
+model = get_model({**model_params, **train_params})
 
 # progess log
 progress_bar = TQDMProgressBar(refresh_rate=200)
 early_stopping = EarlyStopping(monitor="val_loss", mode="min", verbose=False, 
-    min_delta=1e-4)
+    min_delta=1e-4, patience=5)
 
 # initialize results container
 res_dict = defaultdict(lambda: [])
+val_dict = defaultdict(lambda: [])
 
 # initialize dict of hyperparameters
-train_hparams = {'learning_rate': train_params["learning_rate"],
-            'l2_regularization_constant': model_params[
-                "l2_regularization_constant"]}
+train_hparams = {
+    'learning_rate': train_params["learning_rate"],
+    'l2_regularization_constant': model_params[
+        "l2_regularization_constant"]
+}
 
 
 # # validation
@@ -194,7 +153,8 @@ if train_params["validation_start_period"] is not None:
 
     # BU validation regime routine
     for val_period in range(
-            train_params["validation_start_period"], train_params["validation_end_period"] + 1):
+        train_params["validation_start_period"], 
+        train_params["validation_end_period"] + 1):
 
         # update periods
         train_window_begin = val_period - train_params["train_window"]
@@ -210,7 +170,8 @@ if train_params["validation_start_period"] is not None:
             os.makedirs(model_checkpoint_subdir)
 
         val_trainer = Trainer(
-            accelerator="auto", devices=1 if torch.cuda.is_available() else 0,
+            accelerator="auto", 
+            devices=1 if (torch.cuda.is_available() or fast_dev_run) else 0,
             max_epochs=model_params["n_epochs_offline"], reload_dataloaders_every_n_epochs=1,
             enable_checkpointing=train_params["save_model"],
             default_root_dir=model_checkpoint_subdir,
@@ -230,19 +191,39 @@ if train_params["validation_start_period"] is not None:
 
         # train
         val_trainer.fit(
-            model, datamodule=train_dm, run_on_eddie=run_on_eddie)
+            model, datamodule=train_dm)
         print(f"finished val_period {val_period}")
 
         # log hyperparameters
+        ran_epochs = val_trainer.current_epoch - (
+            0 if fast_dev_run else early_stopping.patience)
         val_trainer.logger.log_hyperparams({
             **train_hparams,
-            'n_epochs': val_trainer.current_epoch - early_stopping.patience
+            'n_epochs': ran_epochs
         }, metrics=early_stopping.best_score)
+
+        # save optimal number of epochs 
+        val_dict["n_epochs"].append(ran_epochs)
 
         torch.manual_seed(train_params["seed"])
         model.reset_parameters()
 
+    # end of for loop
+    else:
+
+        # define where to save master results
+        val_master_path = train_params["model_checkpoint_dir"] + "/val.json"
+
+        # concatenate summary results and script args
+        val_dict.update(**vars(parsed_args), **{
+            "average_epochs": np.mean(val_dict["n_epochs"]),
+            "timestamp": timestamp
+            })
+        print(val_dict)
+        append_json_array(val_dict, val_master_path)
+
 else:
+    
     print("skipped validation cycle")
 
 
@@ -255,6 +236,11 @@ else:
 torch.manual_seed(train_params["seed"])
 
 if train_params["test_start_period"] is not None:
+
+    if train_params["validation_start_period"] is not None:
+        optimal_epochs = int(round(pd.Series(val_dict["n_epochs"]).mean(), 0))
+    else:
+        optimal_epochs = model_params["n_epochs_offline"]
     
     # BU test routine
     for test_period in range(
@@ -269,7 +255,8 @@ if train_params["test_start_period"] is not None:
 
         # make checkpoint dir
         model_checkpoint_subdir = f'{train_params["model_checkpoint_dir"]}' + (
-            f'/T{test_period:02}' if train_params["save_model"] else "")
+            f'/T{test_period:02}' if (
+                train_params["save_model"] or params.save_predictions) else "")
         if not os.path.exists(model_checkpoint_subdir):
             os.makedirs(model_checkpoint_subdir) 
 
@@ -278,7 +265,7 @@ if train_params["test_start_period"] is not None:
         test_trainer = Trainer(
             accelerator="auto", 
             devices=1 if (torch.cuda.is_available() or fast_dev_run) else 0,
-            max_epochs=model_params["n_epochs_offline"], reload_dataloaders_every_n_epochs=1,
+            max_epochs=optimal_epochs, reload_dataloaders_every_n_epochs=1,
             enable_checkpointing=train_params["save_model"],
             default_root_dir=model_checkpoint_subdir,
             logger=False, enable_model_summary=False,
@@ -307,17 +294,19 @@ if train_params["test_start_period"] is not None:
         test_trainer.test(model, datamodule=test_dm)
         res_dict["loss"].append(test_trainer.logged_metrics["test_loss"].item())
 
-        # get test AUC
+        # get test AUC and save predictions
+        predictions_path = f'{model_checkpoint_subdir}/preds-s{params.seed}.pt'
         with torch.no_grad():
             test_auc = auc(model, test_dm.test_dataset.y, test_dm.test_dataloader(), 
-                train_params["batch_size"])
+                train_params["batch_size"], 
+                prediction_dst=(
+                    predictions_path if params.save_predictions else None))
         res_dict["auc"].append(test_auc)
 
         torch.manual_seed(train_params["seed"])
         model.reset_parameters()
         
     else:
-        timestamp = get_timestamp()
         df_path = f"{model_checkpoint_subdir.replace(f'/T{test_period:02}', '')}/{timestamp}.csv"
         df_path
 
@@ -333,32 +322,20 @@ if train_params["test_start_period"] is not None:
             ).to_csv(df_path, index=False)
             print(f"saved results csv at: {os.path.abspath(df_path)}")
             
+        # define where to save master results
+        results_master_path = train_params["model_checkpoint_dir"] + "/results.json"
 
-        
+        # concatenate summary results and script args
+        res_dict = average_srs.to_dict()
+        res_dict.update(**vars(parsed_args), **{
+            "n_epochs_on_test": model_params["n_epochs_offline"],
+            "timestamp": timestamp
+            })
+        print(res_dict)
+        append_json_array(res_dict, results_master_path)
+        load_json_array(results_master_path)
+        print(f"Total elapsed time: {(time() - start_time) / 3600:.2f} hrs.")
 
 else:
     print("skipped test cycle")
-
-
-# In[ ]:
-
-
-# define where to save master results
-results_master_path = train_params["model_checkpoint_dir"] + "/results.json"
-
-# concatenate summary results and script args
-res_dict = average_srs.to_dict()
-res_dict.update(**vars(parsed_args), **{
-    "n_epochs_on_test": model_params["n_epochs_offline"],
-    "timestamp": timestamp
-    })
-print(res_dict)
-append_json_array(res_dict, results_master_path)
-load_json_array(results_master_path)
-
-
-# In[ ]:
-
-
-print(f"Total elapsed time: {(time() - start_time) / 3600:.2f} hrs.")
 
