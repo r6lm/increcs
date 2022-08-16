@@ -331,7 +331,7 @@ if train_params["test_start_period"] is not None:
         # concatenate summary results and script args
         res_dict = average_srs.to_dict()
         res_dict.update(**vars(parsed_args), **{
-            "n_epochs_on_test": model_params["n_epochs_offline"],
+            "n_epochs_on_test": optimal_epochs,
             "timestamp": timestamp
             })
         print(res_dict)
