@@ -129,8 +129,6 @@ model = get_model({**model_params, **train_params})
 
 # progess log
 progress_bar = TQDMProgressBar(refresh_rate=200)
-early_stopping = EarlyStopping(monitor="val_loss", mode="min", verbose=False, 
-    min_delta=1e-4, patience=5)
 
 # initialize results container
 res_dict = defaultdict(lambda: [])
@@ -169,6 +167,9 @@ if train_params["validation_start_period"] is not None:
         if not os.path.exists(model_checkpoint_subdir):
             os.makedirs(model_checkpoint_subdir)
 
+        early_stopping = EarlyStopping(monitor="val_loss", mode="min", verbose=False, 
+            min_delta=1e-4, patience=5)
+
         val_trainer = Trainer(
             accelerator="auto", 
             devices=1 if (torch.cuda.is_available() or fast_dev_run) else 0,
@@ -205,6 +206,7 @@ if train_params["validation_start_period"] is not None:
         # save optimal number of epochs 
         val_dict["n_epochs"].append(ran_epochs)
 
+        #reset
         torch.manual_seed(train_params["seed"])
         model.reset_parameters()
 
@@ -303,6 +305,7 @@ if train_params["test_start_period"] is not None:
                     predictions_path if params.save_predictions else None))
         res_dict["auc"].append(test_auc)
 
+        # reset parameters
         torch.manual_seed(train_params["seed"])
         model.reset_parameters()
         

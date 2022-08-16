@@ -73,14 +73,14 @@ class ASMGMLDataModule(LightningDataModule):
     def train_dataloader(self):
         return DataLoader(
             self.train_dataset, batch_size=self.batch_size, shuffle=True,
-            num_workers=1 if self.run_on_eddie else os.cpu_count())
+            num_workers=0 if self.run_on_eddie else os.cpu_count())
 
     def val_dataloader(self):
         return DataLoader(
             self.val_dataset, batch_size=self.batch_size, shuffle=False,
-            num_workers=1 if self.run_on_eddie else os.cpu_count())
+            num_workers=0 if self.run_on_eddie else os.cpu_count())
 
     def test_dataloader(self):
         return DataLoader(
             self.test_dataset, batch_size=self.batch_size, shuffle=False,
-            num_workers=1 if self.run_on_eddie else os.cpu_count())
+            num_workers=0 if self.run_on_eddie else os.cpu_count())
