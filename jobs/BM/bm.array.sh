@@ -17,4 +17,4 @@
 #$ -M ro6lm@outlook.com
 #$ -m beas
  
-bash s$SGE_TASK_ID/s$SGE_TASK_ID.sh 
+s$SGE_TASK_ID/s$SGE_TASK_ID.sh 

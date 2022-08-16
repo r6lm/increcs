@@ -17,7 +17,7 @@ parsed_args
 
 # fast access parameters
 validation_mode = False
-fast_dev_run = False
+fast_dev_run = True
 run_on_eddie = True
 
 
@@ -43,7 +43,7 @@ from utils.performance import auc
 from torch.utils.data import DataLoader
 from MF.model import get_model, MF
 from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import TQDMProgressBar
+from pytorch_lightning.callbacks import TQDMProgressBar, ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import TensorBoardLogger
 
@@ -60,7 +60,26 @@ print(f'{device = }')
 # timestamp = get_timestamp()
 
 
-# # control flow parameters
+# In[ ]:
+
+
+# records of optimal epochs per seed
+n_epochs_offline = {
+    1: 16,
+    2: 14,
+    3: 16,
+    4: 14,
+    5: 13
+}
+neo_per_seed = defaultdict(lambda: int(round(
+    np.mean(list(n_epochs_offline.values())), 0)))
+neo_per_seed.update(n_epochs_offline)
+neo_per_seed[5]
+
+seed_ = int(parsed_args.seed)
+
+
+# # Parameters
 # 
 
 # In[ ]:
@@ -73,11 +92,12 @@ train_params = dict(
     test_start_period=25, # change to None if running as validation
     test_end_period=31,  # 25
     train_window=10,
-    seed=int(parsed_args.seed),
+    seed=seed_,
     model_filename='first_mf',
-    base_path=None,  # "../../model/MF/IU/base/220707T162306/first_mf.ckpt",
+    base_path=None, # "./../../model/MF/IU/base/220707T165013/first_mf.ckpt",
     save_model=False,
-    save_result=True
+    save_result=True,
+    save_prediction=True
 )
 # these are stored on the tensorboard logs
 model_params = dict(
@@ -89,9 +109,9 @@ model_params = dict(
     # moved
     learning_rate=1e-3,  # 1e-2 is the ASMG MF implementation
     batch_size=1024,
-    n_epochs_offline=20,
-    n_epochs_online=5,
-    early_stopping_online=False # train_params["test_start_period"] is None,
+    n_epochs_offline=neo_per_seed[seed_],
+    n_epochs_online=20,
+    early_stopping_online=True # train_params["test_start_period"] is None,
 )
 train_params["model_checkpoint_dir"] = f'./../../model/{model_params["alias"]}/IU'
 
@@ -109,10 +129,11 @@ if validation_mode:
 
 # saved as json to be able to replicate the experiment
 experiment_params = {**model_params, **train_params}
+params = argparse.Namespace(**experiment_params)
 
 # ensure fast dev and early stopping are not both true because the logged losses 
 # do not exist
-assert not (fast_dev_run and model_params["early_stopping_online"])
+# assert not (fast_dev_run and params.early_stopping_online)
 
 
 # In[ ]:
@@ -187,7 +208,7 @@ else:
 torch.manual_seed(train_params["seed"])
 
 
-# # transfer
+# # Online Validation
 
 # In[ ]:
 
@@ -205,7 +226,7 @@ train_hparams = {
 }
 val_list = []
 version = None
-transfer_callbacks = [progress_bar]
+
 
 # IU validation routine
 for val_period in range(
@@ -245,17 +266,22 @@ for val_period in range(
                 )
 
     # use early stopping if the script is running for selecting hyperparameters
+    transfer_callbacks = [progress_bar]
     if model_params["early_stopping_online"]:
         early_stopping = EarlyStopping(
-            monitor="val_loss", mode="min", verbose=True, min_delta=1e-4)
+            monitor="val_loss", mode="min", verbose=True, min_delta=1e-4, 
+            patience=5)
         transfer_callbacks.append(early_stopping)
+        checkpoint_callback = ModelCheckpoint(
+            save_top_k=1, monitor="val_loss", mode="min")
+        transfer_callbacks.append(checkpoint_callback)
 
     val_trainer = Trainer(
         accelerator="auto", 
         devices=1 if (torch.cuda.is_available() or fast_dev_run) else 0,
         max_epochs=model_params["n_epochs_online"],
         reload_dataloaders_every_n_epochs=1,
-        enable_checkpointing=train_params["save_model"],
+        enable_checkpointing=params.save_model or params.early_stopping_online,
         default_root_dir=model_checkpoint_subdir, logger=logger,
         callbacks=transfer_callbacks, enable_model_summary=False,
         fast_dev_run=fast_dev_run, deterministic=True)
@@ -277,8 +303,9 @@ for val_period in range(
                 "val_loss"]).item()
     n_epochs_dict = {}
     if model_params["early_stopping_online"]:
-        n_epochs_dict["n_epochs_online"] = val_trainer.current_epoch - (
-            early_stopping.patience)
+        ran_epochs = val_trainer.current_epoch - (
+            0 if fast_dev_run else early_stopping.patience)
+        n_epochs_dict["n_epochs_online"] = ran_epochs
     val_trainer.logger.log_hyperparams(
         {
             **model_params,
@@ -289,7 +316,15 @@ for val_period in range(
     val_list.append({
         "period": val_period,
         **model_params,
+        "n_epochs": ran_epochs,
         "val_loss": val_score})
+
+    if params.early_stopping_online and not fast_dev_run:
+        # load best from early stopping
+        model = get_model(
+            model_params, return_instance=False).load_from_checkpoint(
+                checkpoint_callback.best_model_path)
+    torch.manual_seed(train_params["seed"])
 
 else:
     # save validation results
@@ -304,7 +339,7 @@ else:
         print(f"saved results csv at: {os.path.abspath(val_df_path)}")
 
 
-# # test 
+# # Online test 
 
 # In[ ]:
 
@@ -314,21 +349,28 @@ if train_params["test_start_period"] is not None:
     # initialize results container
     res_dict = defaultdict(lambda: [])
 
+    # get optimal number of epochs
+    if train_params["val_start_period"] is not None:
+        optimal_epochs = int(round(val_df["n_epochs"].mean(), 0))
+    else:
+        optimal_epochs = model_params["n_epochs_offline"]
+
     print("running online cycles until end of test")
     
-    # BU test routine
+    # IU test routine
     for test_period in range(
         train_params["test_start_period"], train_params["test_end_period"] + 1):
 
         # update periods
         train_period = test_period - 1 
         print(
-            f"train periods: {train_window_begin}-{train_window_end}", 
+            f"train period: {train_period}", 
             f"test period: {test_period}", sep="\n")
 
         # make checkpoint dir
         model_checkpoint_subdir = f'{train_params["model_checkpoint_dir"]}' + (
-            f'/T{test_period:02}' if train_params["save_model"] else "")
+            f'/T{test_period:02}' if (
+                params.save_model or params.save_prediction) else "")
         if not os.path.exists(model_checkpoint_subdir):
             os.makedirs(model_checkpoint_subdir) 
 
@@ -338,7 +380,7 @@ if train_params["test_start_period"] is not None:
         test_trainer = Trainer(
             accelerator="auto", 
             devices=1 if (torch.cuda.is_available() or fast_dev_run) else 0,
-            max_epochs=model_params["n_epochs_online"], reload_dataloaders_every_n_epochs=1,
+            max_epochs=optimal_epochs, reload_dataloaders_every_n_epochs=1,
             enable_checkpointing=train_params["save_model"],
             default_root_dir=model_checkpoint_subdir,
             logger=False, enable_model_summary=False,
@@ -367,11 +409,13 @@ if train_params["test_start_period"] is not None:
         test_trainer.test(model, datamodule=test_dm)
         res_dict["loss"].append(test_trainer.logged_metrics["test_loss"].item())
 
-        # get test AUC
+        # get test AUC and save predictions
+        predictions_path = f'{model_checkpoint_subdir}/preds-s{params.seed}.pt'
         with torch.no_grad():
             test_auc = auc(model, test_dm.test_dataset.y, test_dm.test_dataloader(), 
-                model_params["batch_size"])
+                model_params["batch_size"], prediction_dst=predictions_path)
         res_dict["auc"].append(test_auc)
+        torch.manual_seed(train_params["seed"])
 
         
     else:
@@ -390,6 +434,7 @@ if train_params["test_start_period"] is not None:
             pd.concat((res_df, average_srs.to_frame().T), axis=0, ignore_index=True
             ).to_csv(df_path, index=False)
             print(f"saved results csv at: {os.path.abspath(df_path)}")
+    
 
 else:
     print("skipped test cycle")
@@ -417,10 +462,4 @@ load_json_array(results_master_path)
 
 
 print(f"Total elapsed time: {(time() - start_time) / 3600:.2f} hrs.")
-
-
-# In[ ]:
-
-
-
 

@@ -85,7 +85,7 @@ train_params = dict(
     seed=int(parsed_args.seed),
     save_model=False,
     save_result=True,
-    save_predictions=True,
+    save_prediction=True,
 )
 model_params = dict(
     alias="MF",
@@ -258,7 +258,7 @@ if train_params["test_start_period"] is not None:
         # make checkpoint dir
         model_checkpoint_subdir = f'{train_params["model_checkpoint_dir"]}' + (
             f'/T{test_period:02}' if (
-                train_params["save_model"] or params.save_predictions) else "")
+                train_params["save_model"] or params.save_prediction) else "")
         if not os.path.exists(model_checkpoint_subdir):
             os.makedirs(model_checkpoint_subdir) 
 
@@ -302,7 +302,7 @@ if train_params["test_start_period"] is not None:
             test_auc = auc(model, test_dm.test_dataset.y, test_dm.test_dataloader(), 
                 train_params["batch_size"], 
                 prediction_dst=(
-                    predictions_path if params.save_predictions else None))
+                    predictions_path if params.save_prediction else None))
         res_dict["auc"].append(test_auc)
 
         # reset parameters
