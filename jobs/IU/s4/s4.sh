@@ -2,7 +2,7 @@
 
 # Grid Engine options (lines prefixed with #$)
 # Runtime limit of 1 hour:
-#$ -N IU-seed68
+#$ -N IU-seed4
 #$ -l h_rt=24:00:00
 #
 # Set working directory to the directory where the job is submitted from:

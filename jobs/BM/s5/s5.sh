@@ -2,7 +2,7 @@
 
 # Grid Engine options (lines prefixed with #$)
 # Runtime limit of 1 hour:
-#$ -N BM-seed8
+#$ -N BM-seed5
 #$ -l h_rt=24:00:00
 #
 # Set working directory to the directory where the job is submitted from:
@@ -14,7 +14,7 @@
 # Request system RAM 
 # the total system RAM available to the job is the value specified here multiplied by 
 # the number of requested GPUs (above)
-#$ -l h_vmem=40G
+#$ -l h_vmem=50G
 # send emails
 #$ -M ro6lm@outlook.com
 #$ -m beas
