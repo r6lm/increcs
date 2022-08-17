@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import torch
 import numpy as np
 import glob, argparse
-
+import sys
 sys.path.append("./..") # \todo: change for relative import
 from dataset.ASMGMovieLens import ASMGMovieLens
 
@@ -42,7 +42,7 @@ for seed in range(1,6):
     print(f"{seed = }")
 
     # concatenate results
-    preds_pattern = f"../model/MF/BM/T*/preds-s{seed}.pt"
+    preds_pattern = f"../model/MF/{parsed_args.regime}/T*/preds-s{seed}.pt"
     start_test_period, end_test_period = (25, 31)
     n_periods = end_test_period - start_test_period + 1
     concat_true_y = ASMGMovieLens("../data/preprocessed/ml_processed.csv", 25, 31).y

@@ -450,4 +450,5 @@ model
 code/pocket.py
 code/pocket.txt
 jobs/*/*/BM-*.*
+jobs/*/*/IU-*.*
 write-up/OR-MSc_LaTeX-skeleton/MyThesis.pdf
