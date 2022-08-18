@@ -5,7 +5,7 @@
 
 
 from utils.save import load_json_array
-import seaborn as sns
+# import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
 import torch
@@ -39,7 +39,7 @@ params_dict = dict(
     regimes=("BM", "IU", "BIU"),
     input_path = "../data/preprocessed/ml_processed.csv",
     tyxe_dir="/home/s2110626/diss/TyXe",
-    tyxe_versions=range(45, 50),
+    tyxe_versions=range(73, 78),
     start_test_period = 25,
     end_test_period = 31
 )
@@ -110,7 +110,7 @@ for regime in params.regimes:
             else:
                 filenm_pattern = (
                     f"{params.tyxe_dir}/model/MF/mean-field/version_"
-                    f"{seed_or_version}/T31/preds-s*.pt")
+                    f"{seed_or_version}/T{test_period}/preds-s*.pt")
                 matching_files = glob.glob(filenm_pattern)
                 assert len(matching_files) == 1, (
                     "More than 1 file matches the pattern")
