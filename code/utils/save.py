@@ -61,3 +61,9 @@ def get_version(path, logdir="lightning_logs", version_pattern=r"version_(\d)+")
         return f'version_{latest_version + 1:02}'
     else:
         return f'version_00'
+
+def print_latex(df, column_format="c", **kwargs):
+    if df.shape[1] > len(column_format):
+        n_cols = df.shape[1] + 1
+        n_cols = "c" * n_cols
+    print(df.to_latex(column_format=column_format, **kwargs))
