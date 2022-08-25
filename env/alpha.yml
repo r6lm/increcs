@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - _libgcc_mutex=0.1=main
+  - _libgcc_mutex=0.1*
   - _openmp_mutex=4.5=1_gnu
   - absl-py=1.1.0=pyhd8ed1ab_0
   - aiohttp=3.7.4.post0=py38h7f8727e_2
@@ -58,15 +58,15 @@ dependencies:
   - kiwisolver=1.4.2=py38h295c915_0
   - ld_impl_linux-64=2.35.1=h7274673_9
   - libffi=3.3=he6710b0_2
-  - libgcc-ng=9.3.0=h5101ec6_17
+  - libgcc-ng=9.3.*
   - libgfortran-ng=7.5.0=h14aa051_20
   - libgfortran4=7.5.0=h14aa051_20
-  - libgomp=9.3.0=h5101ec6_17
+  - libgomp=9.3.0.*
   - libllvm11=11.1.0=hf817b99_2
   - libpng=1.6.37=h21135ba_2
   - libprotobuf=3.15.8=h780b84a_0
   - libsodium=1.0.18=h7b6447c_0
-  - libstdcxx-ng=9.3.0=hd4cf53a_17
+  - libstdcxx-ng=9.3.*
   - libtiff=4.0.10=hc3755c2_1005
   - llvmlite=0.38.0=py38h4ff587b_0
   - lz4-c=1.9.3=h9c3ff4c_1
@@ -172,6 +172,7 @@ dependencies:
   - pip:
     - numpy==1.22.3
     - pandas==1.4.2
+    - pytorch-lightning==1.7.0
     - scikit-learn==1.0.2
     - scipy==1.8.0
     - sklearn==0.0

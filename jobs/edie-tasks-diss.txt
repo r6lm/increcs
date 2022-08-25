@@ -1,0 +1,71 @@
+source activate alpha
+cd /exports/eddie/scratch/s2110626/diss/increcs/code/scripts
+
+python BM.py --seed 8
+
+
+# job ids 16/08
+
+## BM
+[s2110626@login01(eddie) s1]$ qsub s1.sh
+Your job 22667778 ("BM-seed1") has been submitted
+[s2110626@login01(eddie) s1]$ cd ../s2
+[s2110626@login01(eddie) s2]$ qsub s2.sh
+Your job 22667786 ("BM-seed2") has been submitted
+[s2110626@login01(eddie) s2]$ cd ../s3
+[s2110626@login01(eddie) s3]$ qsub s3.sh
+Your job 22667788 ("BM-seed3") has been submitted
+[s2110626@login01(eddie) s3]$ cd ../s4
+[s2110626@login01(eddie) s4]$ qsub s4.sh
+Your job 22667789 ("BM-seed4") has been submitted
+[s2110626@login01(eddie) s4]$ cd ../s5
+[s2110626@login01(eddie) s5]$ qsub s5.sh
+Your job 22667791 ("BM-seed5") has been submitted
+
+## IU
+Your job 22680180 ("IU-seed1") has been submitted
+Your job 22680181 ("IU-seed2") has been submitted
+Your job 22680182 ("IU-seed3") has been submitted
+Your job 22680183 ("IU-seed4") has been submitted
+Your job 22680184 ("IU-seed5") has been submitted
+
+### BIU
+Your job 22720043 ("BIU-seed1") has been submitted
+Your job 22720044 ("BIU-seed2") has been submitted
+Your job 22720045 ("BIU-seed3") has been submitted
+Your job 22720046 ("BIU-seed4") has been submitted
+Your job 22720047 ("BIU-seed5") has been submitted
+
+### Ablation BIU
+Your job 22724442 ("BIU-a0-seed1") has been submitted
+Your job 22724443 ("BIU-a0-seed2") has been submitted
+Your job 22724444 ("BIU-a0-seed3") has been submitted
+Your job 22724445 ("BIU-a0-seed4") has been submitted
+Your job 22724446 ("BIU-a0-seed5") has been submitted
+Your job 22724447 ("BIU-a1-seed1") has been submitted
+Your job 22724448 ("BIU-a1-seed2") has been submitted
+Your job 22724449 ("BIU-a1-seed3") has been submitted
+Your job 22724450 ("BIU-a1-seed4") has been submitted
+Your job 22724451 ("BIU-a1-seed5") has been submitted
+Your job 22724452 ("BIU-a2-seed1") has been submitted
+Your job 22724453 ("BIU-a2-seed2") has been submitted
+Your job 22724454 ("BIU-a2-seed3") has been submitted
+Your job 22724455 ("BIU-a2-seed4") has been submitted
+Your job 22724456 ("BIU-a2-seed5") has been submitted
+Your job 22724457 ("BIU-a3-seed1") has been submitted
+Your job 22724458 ("BIU-a3-seed2") has been submitted
+Your job 22724459 ("BIU-a3-seed3") has been submitted
+Your job 22724460 ("BIU-a3-seed4") has been submitted
+Your job 22724462 ("BIU-a3-seed5") has been submitted
+/home/s2110626/diss/TyXe/jobs/validation/ablation
+
+## BIU rando-init 
+Your job 22750439 ("BIU-seed1") has been submitted
+Your job 22750440 ("BIU-seed2") has been submitted
+Your job 22750441 ("BIU-seed3") has been submitted
+Your job 22750442 ("BIU-seed4") has been submitted
+Your job 22750443 ("BIU-seed5") has been submitted
+
+
+
+

@@ -447,4 +447,3 @@ data/*.zip
 data/ml-25m
 data/preprocessed/*
 model
-write-up/main/MyThesis.pdf

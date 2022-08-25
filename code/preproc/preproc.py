@@ -11,7 +11,7 @@
 import pandas as pd
 import os
 
-get_ipython().run_line_magic('matplotlib', 'inline')
+#get_ipython().run_line_magic('matplotlib', 'inline')
 # sns.set(font_scale = 1.5)
 
 
